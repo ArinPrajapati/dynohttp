@@ -9,15 +9,13 @@ import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import { v4 as uuid } from "uuid";
 import { db } from "../config/dynamodb.js";
 import _ from "lodash";
+import { _200, _400, _500 } from "../utils/Response.js";
 
 const getCompany = async (event) => {
   const entityName = event.body ? JSON.parse(event.body).entityName : undefined;
   console.log(entityName);
   if (!entityName) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "Missing entityName in request body" }),
-    };
+    return _400({ error: "Missing entityName in request body" });
   }
   const params = {
     TableName: "CompanyTable",
@@ -35,10 +33,7 @@ const getCompany = async (event) => {
       body: JSON.stringify({ companies }),
     };
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
-    };
+    return _500({ error: error.message });
   }
 };
 
@@ -48,10 +43,7 @@ const getEntityByPk = async (event) => {
   const pk = event.body ? JSON.parse(event.body).pk : undefined;
   console.log(pk);
   if (!entityName || !pk) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "Missing entityName in request body" }),
-    };
+    return _400({ error: "Missing entityName or pk in request body" });
   }
   const params = {
     TableName: "CompanyTable",
@@ -65,15 +57,9 @@ const getEntityByPk = async (event) => {
   try {
     const results = await db.send(new QueryCommand(params));
     const companies = results.Items.map((item) => unmarshall(item)); // Unmarshall each item in the array
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ companies }),
-    };
+    return _200({ companies });
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
-    };
+    return _500({ error: error.message });
   }
 };
 
@@ -81,10 +67,7 @@ const getUserByEmail = async (event) => {
   const email = event.body ? JSON.parse(event.body).email : undefined;
 
   if (!email) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "Missing email in request body" }),
-    };
+    return _400({ error: "Missing email in request body" });
   }
 
   const params = {
@@ -98,15 +81,9 @@ const getUserByEmail = async (event) => {
   try {
     const results = await db.send(new QueryCommand(params));
     const users = results.Items.map((item) => unmarshall(item)); // Unmarshall each item in the array
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ users }),
-    };
+    return _200({ users });
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
-    };
+    return _500({ error: error.message });
   }
 };
 
@@ -115,10 +92,7 @@ const updateUserEmail = async (event) => {
     const email = event.body ? JSON.parse(event.body).email : undefined;
     const newEmail = event.body ? JSON.parse(event.body).newEmail : undefined;
     if (!email || !newEmail) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Missing email in request body" }),
-      };
+      return _400({ error: "Missing email or newEmail in request body" });
     }
     // find user by email
     const findParams = {
@@ -132,10 +106,7 @@ const updateUserEmail = async (event) => {
 
     const findResult = await db.send(new QueryCommand(findParams));
     if (findResult.Items.length === 0) {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ error: "User not found" }),
-      };
+      return _400({ error: "User not found" });
     }
 
     // PK and SK for user from data
@@ -156,15 +127,9 @@ const updateUserEmail = async (event) => {
       ReturnValues: "ALL_NEW",
     };
     const result = await db.send(new UpdateItemCommand(params));
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ result }),
-    };
+    return _200({ result });
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
-    };
+    return _500({ error: error.message });
   }
 };
 

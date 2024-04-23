@@ -73,6 +73,10 @@ functions:
 
 plugins:
   - serverless-offline
+  - serverless-webpack
+
+package:
+  individually: true
 
 custom:
   serverless-offline:
