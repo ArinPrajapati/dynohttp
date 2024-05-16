@@ -1,82 +1,105 @@
-service: dynohttp
+service: testdyno
 frameworkVersion: "3"
 
 provider:
   name: aws
   runtime: nodejs18.x
   region: ap-south-1
-  profile: dyonserver
+  profile: testuser
   iam:
     role:
       statements:
         - Effect: Allow
           Action:
             - "dynamodb:*"
-          Resource:
-            - "*"
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - "lambda:*"
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - execute-api:ManageConnections
+          Resource: "arn:aws:execute-api:ap-south-1:019447061794:03t7vnqzy7/*"
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+          Resource: "*"
 
 functions:
-  apiInfo:
-    handler: index.handler
+  connect:
+    handler: src/routes/chat.connectHandler
+    events:
+      - websocket:
+          route: $connect
+
+  disconnect:
+    handler: src/routes/chat.disconnectHandler
+    events:
+      - websocket:
+          route: $disconnect
+
+  sendMessage:
+    handler: src/routes/chat.sendMessageHandler
+    events:
+      - websocket:
+          route: sendMessage
+
+  getMessages:
+    handler: src/routes/chat.getMessagesHandler
     events:
       - httpApi:
-          path: /
+          path: /messages
           method: get
-
-  apiHello:
-    handler: src/routes/getHello.handler
-    events:
-      - httpApi:
-          path: /hello
-          method: get
-  UserAPi:
-    handler: src/routes/getData.getUserByTask
-    events:
-      - httpApi:
-          path: /getUserByTask/{task}
-          method: get
-
-  CompanyAPi:
-    handler: src/routes/Company.getCompany
-    events:
-      - httpApi:
-          path: /getCompany
-          method: post
-
-  EntityByPk:
-    handler: src/routes/Company.getEntityByPk
-    events:
-      - httpApi:
-          path: /getEntityByPk
-          method: post
-
-  UserByEmail:
-    handler: src/routes/Company.getUserByEmail
-    events:
-      - httpApi:
-          path: /getUserByEmail
-          method: post
-
-  UpdateEmail:
-    handler: src/routes/Company.updateUserEmail
-    events:
-      - httpApi:
-          path: /updateEmail
-          method: post
-
-  dynamoDBStreamHandler:
-    handler: src/routes/event.handler
-    events:
-      - stream:
-          type: dynamodb
-          arn: "arn:aws:dynamodb:ap-south-1:019447061794:table/CompanyTable/stream/2024-04-04T15:21:34.081"
 
 plugins:
   - serverless-offline
-  - serverless-webpack
+
+resources:
+  Resources:
+    ConnectionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: connections
+        AttributeDefinitions:
+          - AttributeName: UserId
+            AttributeType: S
+          - AttributeName: ConnectionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: UserId
+            KeyType: HASH
+          - AttributeName: ConnectionId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
+    MessagesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: messages
+        AttributeDefinitions:
+          - AttributeName: ConversationId
+            AttributeType: S
+          - AttributeName: Timestamp
+            AttributeType: N
+        KeySchema:
+          - AttributeName: ConversationId
+            KeyType: HASH
+          - AttributeName: Timestamp
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
 
 package:
   individually: true
+  exclude:
+    - node_modules/**
+    - .gitignore
+    - .git/**
 
 custom:
   serverless-offline:
